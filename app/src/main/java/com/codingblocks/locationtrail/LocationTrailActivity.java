@@ -22,86 +22,37 @@ import com.google.android.gms.maps.model.LatLng;
 import java.util.ArrayList;
 
 public class LocationTrailActivity extends AppCompatActivity {
+    ArrayList<LatLng> trail = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_location_trail);
-
-    }
-
-    ArrayList<LatLng> trail = new ArrayList<>();
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        if (isPermissionGranted()) {
-            if (isLocationEnabled())
-                setUpLocationListener();
-            else
-                Toast.makeText(
-                        this,
-                        "You need to enable permission",
-                        Toast.LENGTH_LONG
-                ).show();
-        } else
-            requestLocationPermission();
-    }
-
-    Boolean isLocationEnabled() {
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-                || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-    }
 
-    Boolean isPermissionGranted() {
-        return ContextCompat
-                .checkSelfPermission(
-                        this,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED;
-    }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+                FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
-    void requestLocationPermission() {
-        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 999);
-    }
+                LocationRequest request = new LocationRequest().setInterval(2000).setFastestInterval(2000)
+                        .setSmallestDisplacement(1f)
+                        .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == 999) {
-            if (grantResults.length > 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (isLocationEnabled()) {
-                    setUpLocationListener();
-                } else {
-                    Toast.makeText(
-                            this,
-                            "You need to enable permission",
-                            Toast.LENGTH_LONG
-                    ).show();
-                }
+                fusedLocationProviderClient.requestLocationUpdates(request,new LocationCallback(){
+
+                    @Override
+                    public void onLocationResult(LocationResult locationResult) {
+                        super.onLocationResult(locationResult);
+                        for(Location location: locationResult.getLocations()){
+                            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                            trail.add(latLng);
+
+                        }
+                    }
+                },Looper.myLooper());
             }
-        }
+        } else
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 999);
     }
 
-    private void setUpLocationListener() {
-        FusedLocationProviderClient fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
-        LocationRequest request = new LocationRequest().setInterval(2000).setFastestInterval(2000)
-                .setSmallestDisplacement(1f)
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        fusedLocationProviderClient.requestLocationUpdates(request,new LocationCallback(){
-
-            @Override
-            public void onLocationResult(LocationResult locationResult) {
-                super.onLocationResult(locationResult);
-                for(Location location: locationResult.getLocations()){
-                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                    trail.add(latLng);
-
-                }
-            }
-        },Looper.myLooper());
-    }
 }
